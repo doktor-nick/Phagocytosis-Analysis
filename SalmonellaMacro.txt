@@ -1,0 +1,156 @@
+
+// (c) Nick Hamilton 2015. Email: n.hamilton@uq.edu.au
+
+
+// Tested with ImageJ 1.43u
+// requires the CalculatorPlus plugin available in later versions of ImageJ or from the website
+
+
+run("Set Measurements...", "area mean min centroid bounding redirect=None decimal=5");
+
+run("Colors...", "foreground=black background=white selection=magenta");
+
+path = getDirectory("Choose a Directory containing tiffs of Salmonella");
+list = getFileList(path);
+resultsDir = path+"Count_Results/";
+File.makeDirectory(resultsDir);
+
+//setBatchMode(true);
+
+summaryFile = File.open(resultsDir+"AAA_Salmonella_Count_Summary.xls");
+print(summaryFile,"Image\t Total Red \t Internal \t External \t Total Cell Area");
+run("Clear Results");
+
+for (i=0; i<list.length; i++) {
+ if (endsWith(list[i],"tif")){
+  showProgress(i+1, list.length);
+  open(path+list[i]);
+
+  run("Set Scale...", "distance=0 known=0 pixel=1 unit=pixel global");
+   
+  orig = getTitle();
+  selectWindow(orig);
+  
+  run("Split Channels");
+
+// green channel defines the cell regions
+// create a mask with it
+  selectWindow(orig+" (green)");
+  rename("cellmask");
+  run("Median...", "radius=3");
+  setThreshold(40, 255);
+  run("Convert to Mask");
+  // expand cell selection
+  run("Create Selection");    
+  run("Enlarge...", "enlarge=10");
+  run("Fill", "slice");
+
+  // ########### blue channel ##################
+// create a mask that selects blue regions
+  selectWindow(orig+" (blue)");
+  rename("bluemask");
+  run("Median...", "radius=2");
+  run("Subtract Background...", "rolling=10 sliding");
+  setThreshold(40, 255);
+  run("Convert to Mask");
+  //run("Invert");
+
+
+  // ########### red channel ##################
+  // create a mask that selects red regions
+  selectWindow(orig+" (red)");
+  rename("redmask");
+  run("Median...", "radius=1");
+  run("Subtract Background...", "rolling=10 sliding");
+  setThreshold(60, 255);
+  run("Convert to Mask");
+  //run("Invert");
+
+
+  // ########### Now do some measurements ################
+
+  //total green (cell) region
+  selectWindow("cellmask");
+  run("Create Selection");
+  run("Clear Results");
+  run("Measure");
+  run("Select None");
+  cellArea = getResult("Area",0);
+
+  //total red region
+  selectWindow("redmask");
+  run("Create Selection");
+  run("Clear Results");
+  run("Measure");
+  run("Select None");
+  redArea = getResult("Area",0);
+
+  // red in green region
+  selectWindow("redmask"); 
+  run("Duplicate...", "title=redInGreenmask");
+  run("Calculator Plus", "i1=cellmask i2=redInGreenmask operation=[Multiply: i2 = (i1*i2) x k1 + k2] k1=0.00392 k2=0");
+  run("Convert to Mask");
+  run("Create Selection");
+  run("Clear Results");
+  run("Measure");
+  run("Select None");
+  redInGreenArea = getResult("Area",0);
+
+  //total blue region
+  selectWindow("bluemask");
+  run("Create Selection");
+  run("Clear Results");
+  run("Measure");
+  run("Select None");
+  blueArea = getResult("Area",0);
+
+  // blue in green region
+  selectWindow("bluemask"); 
+  run("Duplicate...", "title=blueInGreen");
+  run("Calculator Plus", "i1=cellmask i2=blueInGreen operation=[Multiply: i2 = (i1*i2) x k1 + k2] k1=0.00392 k2=0");
+  run("Convert to Mask");
+  run("Create Selection");
+  run("Clear Results");
+  run("Measure");
+  run("Select None");
+  blueInGreenArea = getResult("Area",0);
+  blueNotInGreenArea = blueArea - blueInGreenArea;
+ 
+  // red in green in blue region
+  selectWindow("redInGreenmask"); 
+  run("Duplicate...", "title=redInGreenInBlue");
+  run("Calculator Plus", "i1=bluemask i2=redInGreenInBlue operation=[Multiply: i2 = (i1*i2) x k1 + k2] k1=0.00392 k2=0");
+  run("Convert to Mask");
+  run("Create Selection");
+  run("Clear Results");
+  run("Measure");
+  run("Select None");
+  redInGreenInBlueArea = getResult("Area",0); 
+
+
+  internal =   redInGreenArea - redInGreenInBlueArea;
+  external = redInGreenInBlueArea;
+
+  print(summaryFile,orig+"\t"+redArea+"\t"+internal+"\t"+external+"\t"+cellArea);
+  //run("Clear Results");
+
+
+  // Save the area selection images by merging first
+  run("Merge Channels...", "red=redmask green=cellmask blue=bluemask gray=*None* create");
+  selectWindow("Composite");
+  saveAs("tiff", resultsDir+orig+"_masks.tif");
+  selectWindow(orig+"_masks.tif");
+  close();
+
+  // close other windows
+   selectWindow("blueInGreen"); 
+   close();
+   selectWindow("redInGreenInBlue"); 
+   close();  
+
+   selectWindow("redInGreenmask"); 
+   close();  
+
+ }  //end if
+} // end for
+
