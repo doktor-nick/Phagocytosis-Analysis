@@ -3,7 +3,7 @@
 ImageJ macro scripts for the analysis of phagocytosis.
 
 These scripts part of the book chapter:
-N.D. Condon, J.C. Yeo, A.A. Wall, J.L. Stow and N.A. Hamilton. High-throughput image analysis of phagocytosis and phagosome maturation. In preparation for Methods in Molecular Biology.
+N.D. Condon, A.A. Wall, J.C. Yeo, N.A. Hamilton & J.L. Stow. High-throughput image analysis of phagocytosis and phagosome maturation. In preparation for Methods in Molecular Biology.
 
 See also:
 J. Yeo, A.Wall, J.L. Stow and N.A. Hamilton. High-throughput quantification of phagocytosis. Biotechniques 55(3):115-124.
